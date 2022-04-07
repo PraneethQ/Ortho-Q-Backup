@@ -1,0 +1,29 @@
+version: '3.4'
+
+services:
+
+  portainer:
+    image: portainer/portainer-ce
+
+  usermanagementdb:
+    image: mongo
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+
+  usermanagement.api:
+    image: ${DOCKER_REGISTRY-}usermanagementapi
+    build:
+      context: .
+      dockerfile: Services/UserManagement/UserManagement.API/Dockerfile
+
+  notification.api:
+    image: ${DOCKER_REGISTRY-}notificationapi
+    build:
+      context: .
+      dockerfile: Services/Notification/Notification.API/Dockerfile
+
+volumes:
+  mongo_data:
+  portainer_data:
+

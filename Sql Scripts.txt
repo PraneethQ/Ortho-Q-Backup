@@ -1,0 +1,196 @@
+Sample Table For OrthoQ POC
+-----------------------------
+
+CREATE TABLE MEMBER(ID INT IDENTITY(1,1), MEMBER_ID UNIQUEIDENTIFIER DEFAULT NEWID(), FIRST_NAME VARCHAR(100), 
+MIDDLE_NAME VARCHAR(100), LAST_NAME VARCHAR(100), GENDER VARCHAR(10), USER_ID INT,
+MARITAL_STATUS_ID INT,CREATED_BY VARCHAR(200), CREATED_ON DATETIME, UPDATED_BY VARCHAR(200),
+UPDATED_DATE DATETIME, DELETED_BY VARCHAR(200), DELETE_ON DATETIME, IS_ACTIVE BIT)
+
+INSERT INTO MEMBER VALUES(NEWID(),'Bharath', 'Kumar', 'Kosuri','Male',1,2,6,GETDATE(),NULL,NULL,NULL,NULL,1)
+INSERT INTO MEMBER VALUES(NEWID(),'Swaroop', NULL, 'Kavali','Male',2,2,6,GETDATE(),NULL,NULL,NULL,NULL,1)
+INSERT INTO MEMBER VALUES(NEWID(),'Hari', NULL, 'Tamada','Male',3,2,6,GETDATE(),NULL,NULL,NULL,NULL,1)
+INSERT INTO MEMBER VALUES(NEWID(),'Ramyasri', NULL, 'Ramyasri','Male',4,2,6,GETDATE(),NULL,NULL,NULL,NULL,1)
+INSERT INTO MEMBER VALUES(NEWID(),'Anil', 'Kumar', 'Madhura','Male',5,2,6,GETDATE(),NULL,NULL,NULL,NULL,1)
+------------------------------
+
+
+CREATE TABLE [USERS] ([USER_ID] INT IDENTITY(1,1), USERNAME VARCHAR(300), EMAIL VARCHAR(500), MOBILE_PHONE VARCHAR(20),
+CREATED_ON DATETIME, DELETED_ON DATETIME, IS_ACTIVE BIT)
+
+INSERT INTO [USERS] VALUES ('Bharath.Kosuri','bharath.kosuri@qentelli.com', '1122334455', GETDATE(),NULL, 1)
+INSERT INTO [USERS] VALUES ('Swaroop.kavali','swaroop.kavali@qentelli.com', '4433445566', GETDATE(),NULL, 1)
+INSERT INTO [USERS] VALUES ('Hari.Tamada','hari.tamada@qentelli.com', '4455225511', GETDATE(),NULL, 1)
+INSERT INTO [USERS] VALUES ('Ramyasri.Kontham','ramyasri.kontham@qentelli.com', '4477884411', GETDATE(),NULL, 1)
+INSERT INTO [USERS] VALUES ('Anil.Madhura','anil.madhura@qentelli.com', '5588002223', GETDATE(),NULL, 1)
+INSERT INTO [USERS] VALUES ('Admin','admin@qentelli.com', '0000099999', GETDATE(),NULL, 1)
+
+
+------------------------------
+CREATE TABLE MARITAL_STATUS (MARITAL_STATUS_ID INT IDENTITY(1,1) , CATEGORY VARCHAR(100), IS_ACTIVE BIT)
+
+INSERT INTO MARITAL_STATUS Values ('Single', 1)
+INSERT INTO MARITAL_STATUS Values ('Married', 1)
+INSERT INTO MARITAL_STATUS Values ('Divorced', 1)
+INSERT INTO MARITAL_STATUS Values ('Widowed', 1)
+INSERT INTO MARITAL_STATUS Values ('Separared', 1)
+
+--------------------------------Table Scripts End-----------------------
+
+
+***Function to create the Proper case text [usefull in creating the class files]****
+--------------------------------------------------------------------------------------
+
+create function ProperCase(@Text as varchar(8000))
+returns varchar(8000)
+as
+begin
+  declare @Reset bit;
+  declare @Ret varchar(8000);
+  declare @i int;
+  declare @c char(1);
+
+  if @Text is null
+    return null;
+
+  select @Reset = 1, @i = 1, @Ret = '';
+
+  while (@i <= len(@Text))
+    select @c = substring(@Text, @i, 1),
+      @Ret = @Ret + case when @Reset = 1 then UPPER(@c) else LOWER(@c) end,
+      @Reset = case when @c like '[a-zA-Z]' then 0 else 1 end,
+      @i = @i + 1
+  return @Ret
+end
+
+-------------------------------------------------------------------------
+Sql Script To Generate C# class file from DB Entity: [for models in Project]
+--------------------------------------------------------------------------
+
+
+declare @TableName sysname = 'MEMBER'
+declare @Result varchar(max) = 'public class ' + @TableName + '
+{'
+
+select @Result = @Result + '
+    public ' + ColumnType + NullableSign + ' ' + ColumnName + ' { get; set; }
+'
+from
+(
+    select 
+        replace([dbo].[ProperCase](col.name), '_', '') ColumnName,
+        column_id ColumnId,
+        case typ.name 
+            when 'bigint' then 'long'
+            when 'binary' then 'byte[]'
+            when 'bit' then 'bool'
+            when 'char' then 'string'
+            when 'date' then 'DateTime'
+            when 'datetime' then 'DateTime'
+            when 'datetime2' then 'DateTime'
+            when 'datetimeoffset' then 'DateTimeOffset'
+            when 'decimal' then 'decimal'
+            when 'float' then 'float'
+            when 'image' then 'byte[]'
+            when 'int' then 'int'
+            when 'money' then 'decimal'
+            when 'nchar' then 'char'
+            when 'ntext' then 'string'
+            when 'numeric' then 'decimal'
+            when 'nvarchar' then 'string'
+            when 'real' then 'double'
+            when 'smalldatetime' then 'DateTime'
+            when 'smallint' then 'short'
+            when 'smallmoney' then 'decimal'
+            when 'text' then 'string'
+            when 'time' then 'TimeSpan'
+            when 'timestamp' then 'DateTime'
+            when 'tinyint' then 'byte'
+            when 'uniqueidentifier' then 'Guid'
+            when 'varbinary' then 'byte[]'
+            when 'varchar' then 'string'
+            else 'UNKNOWN_' + typ.name
+        end ColumnType,
+        case 
+            when col.is_nullable = 1 and typ.name in ('bigint', 'bit', 'date', 'datetime', 'datetime2', 'datetimeoffset', 'decimal', 'float', 'int', 'money', 'numeric', 'real', 'smalldatetime', 'smallint', 'smallmoney', 'time', 'tinyint', 'uniqueidentifier') 
+            then '?' 
+            else '' 
+        end NullableSign
+    from sys.columns col
+        join sys.types typ on
+            col.system_type_id = typ.system_type_id AND col.user_type_id = typ.user_type_id
+    where object_id = object_id(@TableName)
+) t
+order by ColumnId
+
+set @Result = @Result  + '
+}'
+
+print @Result
+
+
+
+-----------------------------------------------------------------------------------
+Sql Script To Generate C# class file from DB Entity: : [for Entities in project]
+------------------------------------------------------------------------------------
+
+declare @TableName sysname = 'MEMBER'
+declare @Result varchar(max) = 'public class ' + @TableName + '
+{'
+
+select @Result = @Result + '
+    public ' + ColumnType + NullableSign + ' ' + ColumnName + ' { get; set; }
+'
+from
+(
+    select 
+        --replace([dbo].[ProperCase](col.name), '_', '') ColumnName,
+		replace (col.name, ' ', '_') ColumnName,
+        column_id ColumnId,
+        case typ.name 
+            when 'bigint' then 'long'
+            when 'binary' then 'byte[]'
+            when 'bit' then 'bool'
+            when 'char' then 'string'
+            when 'date' then 'DateTime'
+            when 'datetime' then 'DateTime'
+            when 'datetime2' then 'DateTime'
+            when 'datetimeoffset' then 'DateTimeOffset'
+            when 'decimal' then 'decimal'
+            when 'float' then 'float'
+            when 'image' then 'byte[]'
+            when 'int' then 'int'
+            when 'money' then 'decimal'
+            when 'nchar' then 'char'
+            when 'ntext' then 'string'
+            when 'numeric' then 'decimal'
+            when 'nvarchar' then 'string'
+            when 'real' then 'double'
+            when 'smalldatetime' then 'DateTime'
+            when 'smallint' then 'short'
+            when 'smallmoney' then 'decimal'
+            when 'text' then 'string'
+            when 'time' then 'TimeSpan'
+            when 'timestamp' then 'DateTime'
+            when 'tinyint' then 'byte'
+            when 'uniqueidentifier' then 'Guid'
+            when 'varbinary' then 'byte[]'
+            when 'varchar' then 'string'
+            else 'UNKNOWN_' + typ.name
+        end ColumnType,
+        case 
+            when col.is_nullable = 1 and typ.name in ('bigint', 'bit', 'date', 'datetime', 'datetime2', 'datetimeoffset', 'decimal', 'float', 'int', 'money', 'numeric', 'real', 'smalldatetime', 'smallint', 'smallmoney', 'time', 'tinyint', 'uniqueidentifier') 
+            then '?' 
+            else '' 
+        end NullableSign
+    from sys.columns col
+        join sys.types typ on
+            col.system_type_id = typ.system_type_id AND col.user_type_id = typ.user_type_id
+    where object_id = object_id(@TableName)
+) t
+order by ColumnId
+
+set @Result = @Result  + '
+}'
+
+print @Result
+

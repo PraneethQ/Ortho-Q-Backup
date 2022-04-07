@@ -1,0 +1,47 @@
+version: '3.4'
+
+services:
+
+  usermanagementdb:
+    container_name: usermanagementdb
+    restart: always
+    ports:
+    #official port numbers of mongo db, that we have used while creating mongo db as well.
+      - "27017:27017"
+    volumes:
+    #storage location of volume : /data/db
+      - mongo_data:/data/db
+
+  rabbitmq:
+    container_name: rabbitmq
+    restart: always
+    ports:
+        - "5672:5672"
+        - "15672:15672"
+
+  portainer:
+    container_name: portainer
+    restart: always
+    ports:
+      - "8080:8000"
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+  usermanagement.api:
+    container_name: usermanagement.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "DatabaseSettings:ConnectionString=mongodb://usermanagementdb:27017"
+    depends_on:
+      - usermanagementdb
+    ports:
+      - "8002:80"
+
+  notification.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "80"
+
